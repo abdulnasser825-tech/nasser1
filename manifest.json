@@ -8,5 +8,12 @@
   "short_name": "Fitness",
   "start_url": "https://abdulnasser825-tech.github.io/nasser1/",
   "theme_color": "#060d14",
-  "description": "Daily exercise routines for Android TV"
+  "description": "Daily exercise routines for Android TV",
+  "icons": [
+    {
+      "src": "https://www.pwabuilder.com/assets/icons/icon_512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
 }
