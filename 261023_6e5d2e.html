@@ -1,0 +1,1818 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#060d14">
+<title>التمارين اليومية - Android TV Pro</title>
+<style>
+  :root {
+    --bg-top: #0c1b29;
+    --bg-bottom: #050b11;
+    --card-bg: rgba(17, 32, 46, 0.78);
+    --card-bg-elevated: rgba(25, 46, 66, 0.92);
+    --primary: #4CAF50;
+    --primary-light: #81C784;
+    --accent-cyan: #29B6F6;
+    --warning: #FFC107;
+    --danger: #FF5252;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden;
+    background: radial-gradient(circle at 50% 0%, var(--bg-top) 0%, var(--bg-bottom) 75%);
+    color: var(--text-main);
+    font-family: 'Segoe UI', Tahoma, system-ui, -apple-system, sans-serif;
+    -webkit-user-select: none; user-select: none;
+  }
+
+  .ambient-glow {
+    position: fixed; width: 55vw; height: 55vw; border-radius: 50%;
+    background: radial-gradient(circle, rgba(76, 175, 80, 0.1) 0%, transparent 70%);
+    top: -20vw; left: 22vw; pointer-events: none; z-index: 0;
+    transition: background 0.6s ease;
+  }
+  body.prep-ambient .ambient-glow {
+    background: radial-gradient(circle, rgba(255, 193, 7, 0.12) 0%, transparent 70%);
+  }
+
+  .app {
+    position: fixed; top: 2.8vh; left: 3.2vw; right: 3.2vw; bottom: 2.8vh;
+    display: flex; flex-direction: column; z-index: 1;
+  }
+
+  .screen {
+    display: none; flex-direction: column; width: 100%; height: 100%;
+    opacity: 0; transform: translateY(8px) scale(0.992);
+    transition: opacity 0.28s var(--ease-out), transform 0.28s var(--ease-out);
+  }
+  .screen.active { display: flex; opacity: 1; transform: translateY(0) scale(1); }
+
+  .top-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    width: 100%; padding: 0.4vh 0.5vw; gap: 1.5vw;
+  }
+  .top-stats-group { display: flex; align-items: center; gap: 1.2vw; }
+  .streak-badge {
+    background: var(--card-bg);
+    border: 1.5px solid rgba(76, 175, 80, 0.4);
+    padding: 0.7vh 1.4vw; border-radius: 999px;
+    font-size: clamp(0.9rem, 1.2vw, 1.3rem); color: var(--text-muted);
+    display: flex; align-items: center; gap: 0.5vw;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+  }
+  .streak-badge strong { color: var(--warning); font-size: 1.1em; }
+
+  .week-strip {
+    display: flex; align-items: center; gap: 0.45vw;
+    background: var(--card-bg);
+    border: 1.5px solid rgba(255,255,255,0.08);
+    padding: 0.5vh 1vw; border-radius: 999px;
+  }
+  .day-dot {
+    display: flex; align-items: center; gap: 4px;
+    font-size: clamp(0.75rem, 0.95vw, 1rem); color: var(--text-muted);
+    padding: 0.2vh 0.5vw; border-radius: 999px;
+  }
+  .day-dot .circle {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: rgba(255,255,255,0.14);
+  }
+  .day-dot.done { color: var(--primary-light); font-weight: bold; }
+  .day-dot.done .circle { background: var(--primary); box-shadow: 0 0 8px var(--primary); }
+  .day-dot.today { background: rgba(255, 193, 7, 0.12); color: var(--warning); }
+
+  .pill-btn {
+    background: var(--card-bg); color: var(--text-main);
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    padding: 0.7vh 1.4vw; border-radius: 999px;
+    font-size: clamp(0.9rem, 1.15vw, 1.25rem);
+    font-family: inherit; font-weight: bold; cursor: pointer;
+    display: flex; align-items: center; gap: 0.5vw;
+    transition: all 0.2s var(--ease-out);
+  }
+  .pill-btn.active-toggle { border-color: rgba(76, 175, 80, 0.6); color: var(--primary-light); }
+  .pill-btn:focus, .pill-btn:hover {
+    outline: none; border-color: var(--warning);
+    background: var(--card-bg-elevated); transform: scale(1.03);
+  }
+
+  #home { justify-content: space-between; align-items: center; }
+  .home-center {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 2.4vh; width: 100%; flex: 1;
+  }
+  .hero-header { text-align: center; }
+  h1 {
+    font-size: clamp(2rem, 3.6vw, 3.4rem); margin: 0;
+    color: #fff; letter-spacing: -0.5px;
+  }
+  h1 span { color: var(--primary); }
+  .hero-sub {
+    font-size: clamp(0.95rem, 1.2vw, 1.3rem); color: var(--text-muted);
+    margin-top: 0.4vh;
+  }
+
+  .routines {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(240px, 1fr));
+    gap: 1.8vw; width: 100%; max-width: 92vw;
+  }
+  .routine-card {
+    background: var(--card-bg);
+    border: 2.5px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px; padding: 2.2vh 1.8vw;
+    color: white; cursor: pointer;
+    display: flex; flex-direction: column; justify-content: space-between;
+    gap: 1.4vh; transition: all 0.24s var(--ease-out);
+    font-family: inherit; position: relative;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+    text-align: right;
+  }
+  .routine-card:hover, .routine-card:focus {
+    background: var(--card-bg-elevated);
+    border-color: var(--warning); outline: none;
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.55), 0 0 0 3px rgba(255, 193, 7, 0.25);
+  }
+  .routine-card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    width: 100%; border-bottom: 1px solid rgba(255,255,255,0.08);
+    padding-bottom: 1vh;
+  }
+  .routine-title-group { display: flex; align-items: center; gap: 0.8vw; }
+  .routine-emoji { font-size: clamp(2rem, 3vw, 3rem); line-height: 1; }
+  .routine-title { font-size: clamp(1.25rem, 1.75vw, 1.9rem); font-weight: 800; color: #fff; }
+  .routine-meta {
+    font-size: clamp(0.8rem, 1vw, 1.1rem); color: var(--warning);
+    background: rgba(255, 193, 7, 0.12); padding: 0.35vh 0.8vw;
+    border-radius: 999px; font-weight: bold; white-space: nowrap;
+  }
+  .routine-desc-short {
+    font-size: clamp(0.85rem, 1.05vw, 1.15rem); color: var(--text-muted);
+    line-height: 1.4; margin: 0;
+  }
+  .routine-preview-list {
+    width: 100%; display: flex; flex-wrap: wrap; gap: 0.6vh 0.5vw;
+  }
+  .preview-chip {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    padding: 0.4vh 0.8vw; border-radius: 8px;
+    font-size: clamp(0.8rem, 0.98vw, 1.05rem); color: var(--text-main);
+  }
+  .start-cta {
+    width: 100%; text-align: center; margin-top: 0.4vh;
+    background: rgba(76, 175, 80, 0.2); color: var(--primary-light);
+    border: 1.5px solid rgba(76, 175, 80, 0.5);
+    font-weight: bold; padding: 1vh; border-radius: 12px;
+    font-size: clamp(0.95rem, 1.25vw, 1.35rem);
+    transition: all 0.2s;
+  }
+  .routine-card:focus .start-cta, .routine-card:hover .start-cta {
+    background: var(--warning); color: #050b11; border-color: var(--warning);
+  }
+  .done-badge {
+    position: absolute; top: -12px; left: 16px;
+    background: var(--primary); color: #050b11;
+    padding: 4px 14px; border-radius: 999px;
+    font-size: clamp(0.8rem, 1vw, 1.05rem); font-weight: 800;
+    display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  }
+  .routine-card.done .done-badge { display: block; }
+
+  .hint {
+    font-size: clamp(0.9rem, 1.1vw, 1.2rem);
+    color: var(--text-muted); text-align: center;
+    background: var(--card-bg);
+    padding: 0.8vh 2vw; border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  #intro { justify-content: space-between; align-items: center; padding: 1vh 0; }
+  .intro-top { display: flex; flex-direction: column; align-items: center; gap: 0.8vh; }
+  .intro-emoji { font-size: clamp(3rem, 5vw, 4.5rem); line-height: 1; }
+  #introTitle { font-size: clamp(1.8rem, 3.2vw, 3rem); margin: 0; color: var(--primary-light); }
+  .intro-meta {
+    font-size: clamp(0.95rem, 1.25vw, 1.35rem); color: var(--warning);
+    background: rgba(255, 193, 7, 0.14); padding: 0.4vh 1.4vw; border-radius: 999px; font-weight: bold;
+  }
+  .goal-card {
+    width: min(92%, 1080px);
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.12), rgba(41, 182, 246, 0.08));
+    border: 2px solid rgba(76, 175, 80, 0.45);
+    border-radius: 20px; padding: 2vh 2.5vw; text-align: center;
+  }
+  .goal-label { font-size: clamp(0.95rem, 1.25vw, 1.35rem); color: var(--primary-light); font-weight: bold; margin-bottom: 0.6vh; }
+  .goal-text { font-size: clamp(1.1rem, 1.55vw, 1.7rem); color: var(--text-main); line-height: 1.5; margin: 0; font-weight: 600; }
+
+  .benefits-section { width: min(92%, 1080px); text-align: center; }
+  .benefits-title { font-size: clamp(1rem, 1.35vw, 1.45rem); color: var(--primary-light); font-weight: bold; margin-bottom: 1.2vh; }
+  .benefits-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1vh 1.4vw; }
+  .benefit-item {
+    background: var(--card-bg);
+    border: 1.5px solid rgba(76, 175, 80, 0.25);
+    border-right: 5px solid var(--primary);
+    border-radius: 14px; padding: 1.2vh 1.2vw;
+    display: flex; align-items: center; gap: 0.8vw;
+    font-size: clamp(0.95rem, 1.25vw, 1.35rem); text-align: right;
+  }
+  .intro-controls { display: flex; gap: 1.5vw; justify-content: center; }
+
+  .player-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.9vh 1.5vw; background: var(--card-bg);
+    border-radius: 16px; border: 1px solid rgba(255,255,255,0.08);
+    font-size: clamp(0.95rem, 1.25vw, 1.35rem); color: var(--text-muted);
+  }
+  .header-right, .header-left { display: flex; align-items: center; gap: 1vw; }
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 0.85em; padding: 0.35vh 0.9vw; border-radius: 999px;
+    background: rgba(5, 11, 17, 0.65); border: 1px solid rgba(255,255,255,0.1);
+  }
+  .status-pill.active { color: var(--primary-light); border-color: rgba(76, 175, 80, 0.4); }
+  .status-pill.warn { color: var(--warning); border-color: rgba(255, 193, 7, 0.4); }
+
+  .player-body {
+    flex: 1; display: grid;
+    grid-template-columns: 1.15fr 1.3fr 0.85fr;
+    align-items: stretch; gap: 1.6vw; padding: 1.4vh 0; min-height: 0;
+  }
+
+  .visual-panel {
+    display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+    background: radial-gradient(circle at 50% 45%, rgba(76, 175, 80, 0.15) 0%, var(--card-bg) 78%);
+    border: 2.5px solid rgba(76, 175, 80, 0.45);
+    border-radius: 24px; padding: 1.6vh 1.4vw;
+    position: relative; overflow: hidden;
+    transition: border-color 0.3s ease;
+  }
+  .visual-panel.prep-mode {
+    border-color: var(--warning);
+    background: radial-gradient(circle at 50% 45%, rgba(255, 193, 7, 0.15) 0%, var(--card-bg) 78%);
+  }
+  .visual-top-bar { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 0.5vw; }
+  .position-tag {
+    background: rgba(41, 182, 246, 0.16); color: var(--accent-cyan);
+    border: 1px solid rgba(41, 182, 246, 0.4);
+    padding: 0.35vh 0.9vw; border-radius: 999px;
+    font-size: clamp(0.8rem, 1.05vw, 1.15rem); font-weight: bold;
+  }
+  .muscle-tag {
+    background: rgba(255, 82, 82, 0.15); color: #ff8a80;
+    border: 1px solid rgba(255, 82, 82, 0.38);
+    padding: 0.35vh 0.9vw; border-radius: 999px;
+    font-size: clamp(0.8rem, 1.05vw, 1.15rem); font-weight: bold;
+  }
+  .svg-stage {
+    width: 100%; flex: 1; min-height: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .svg-stage svg {
+    width: 100%; height: 100%; max-height: 35vh; overflow: visible;
+    filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.45));
+  }
+
+  .breath-widget {
+    width: 100%; background: rgba(5, 11, 17, 0.78);
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 0.7vh 1vw; border-radius: 14px;
+    display: flex; align-items: center; justify-content: space-between; gap: 0.8vw;
+  }
+  .breath-pacer {
+    display: flex; align-items: center; gap: 0.5vw;
+    background: rgba(76, 175, 80, 0.15);
+    padding: 0.3vh 0.8vw; border-radius: 999px;
+    border: 1px solid rgba(76, 175, 80, 0.35);
+    white-space: nowrap;
+  }
+  .breath-orb {
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--primary-light);
+    box-shadow: 0 0 8px var(--primary);
+    transition: transform 1.8s ease-in-out, background 0.5s;
+  }
+  .breath-orb.inhale { transform: scale(1.45); background: var(--accent-cyan); }
+  .breath-orb.exhale { transform: scale(0.8); background: var(--primary-light); }
+  .breath-state-lbl { font-size: clamp(0.8rem, 1vw, 1.1rem); font-weight: 800; color: #fff; }
+  .breath-guide-text {
+    font-size: clamp(0.8rem, 1vw, 1.1rem); color: var(--text-muted);
+    text-align: right; flex: 1;
+  }
+
+  .details-panel {
+    display: flex; flex-direction: column; justify-content: space-between;
+    background: var(--card-bg);
+    border: 2px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px; padding: 2vh 1.8vw; text-align: right;
+  }
+  .phase-header { display: flex; align-items: center; justify-content: space-between; gap: 1vw; }
+  .phase-badge {
+    font-size: clamp(0.95rem, 1.25vw, 1.35rem); font-weight: bold;
+    padding: 0.45vh 1.2vw; border-radius: 999px;
+    background: rgba(76, 175, 80, 0.18); color: var(--primary-light);
+    border: 2px solid var(--primary);
+  }
+  .phase-badge.prep {
+    background: rgba(255, 193, 7, 0.18); color: var(--warning); border-color: var(--warning);
+  }
+  .target-pill {
+    font-size: clamp(1rem, 1.3vw, 1.4rem); font-weight: bold;
+    color: var(--warning); background: rgba(255, 193, 7, 0.12);
+    border: 1px solid rgba(255, 193, 7, 0.4);
+    padding: 0.45vh 1.2vw; border-radius: 999px;
+  }
+  .exercise-name {
+    font-size: clamp(1.7rem, 2.7vw, 2.9rem);
+    font-weight: 800; color: #ffffff; margin: 0.8vh 0 0.3vh; line-height: 1.2;
+  }
+  .exercise-desc {
+    font-size: clamp(0.95rem, 1.25vw, 1.35rem); color: var(--text-muted); margin-bottom: 1vh;
+  }
+
+  .steps-box { display: flex; flex-direction: column; gap: 1vh; margin: auto 0; }
+  .steps-title {
+    font-size: clamp(0.9rem, 1.15vw, 1.2rem); color: var(--primary-light); font-weight: bold;
+  }
+  .step-item {
+    display: flex; align-items: center; gap: 0.9vw;
+    background: rgba(5, 11, 17, 0.55);
+    border: 1.5px solid transparent;
+    border-right: 4px solid rgba(76, 175, 80, 0.45);
+    padding: 1vh 1.1vw; border-radius: 12px;
+    font-size: clamp(0.98rem, 1.35vw, 1.48rem);
+    color: #e2e8f0; font-weight: 600; line-height: 1.35;
+    transition: all 0.3s var(--ease-out);
+  }
+  .step-item.active-step {
+    background: rgba(76, 175, 80, 0.14);
+    border-color: rgba(76, 175, 80, 0.45);
+    border-right: 6px solid var(--warning);
+    color: #ffffff; transform: translateX(-4px);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  }
+  .step-num {
+    background: rgba(76, 175, 80, 0.25); color: var(--primary-light);
+    width: clamp(24px, 2vw, 32px); height: clamp(24px, 2vw, 32px);
+    border-radius: 50%; display: inline-flex;
+    align-items: center; justify-content: center;
+    font-weight: 900; font-size: 0.85em; flex-shrink: 0;
+    transition: all 0.3s;
+  }
+  .step-item.active-step .step-num {
+    background: var(--warning); color: #050b11; transform: scale(1.1);
+  }
+
+  .next-up-bar {
+    margin-top: 1vh; padding-top: 1vh;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: clamp(0.9rem, 1.15vw, 1.25rem); color: var(--text-muted);
+  }
+  .next-up-bar strong { color: var(--text-main); }
+
+  .timer-panel {
+    display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+    background: var(--card-bg);
+    border: 2px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px; padding: 2vh 1.2vw;
+  }
+  .ring-container {
+    position: relative;
+    width: min(21vw, 33vh); height: min(21vw, 33vh);
+    display: flex; align-items: center; justify-content: center;
+    margin: auto 0;
+  }
+  .ring-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring-bg { fill: none; stroke: rgba(255, 255, 255, 0.07); stroke-width: 12; }
+  .ring-progress {
+    fill: none; stroke: var(--primary); stroke-width: 12;
+    stroke-linecap: round; stroke-dasharray: 565.48; stroke-dashoffset: 0;
+    transition: stroke 0.25s ease;
+  }
+  .ring-progress.prep-ring { stroke: var(--warning); }
+  .ring-progress.danger-ring { stroke: var(--danger); }
+
+  .timer-center { display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; text-align: center; }
+  .timer {
+    font-size: clamp(2.8rem, 5.4vw, 5.4rem); font-weight: 900;
+    color: var(--primary); font-variant-numeric: tabular-nums; line-height: 1;
+    text-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
+    transition: transform 0.15s ease, color 0.2s ease;
+  }
+  .timer.prep-timer { color: var(--warning); }
+  .timer.warning { color: var(--warning); }
+  .timer.danger { color: var(--danger); transform: scale(1.07); }
+  .timer.paused { color: var(--warning); animation: pulse 1.2s infinite; }
+  .timer-sublabel { font-size: clamp(0.8rem, 1.05vw, 1.15rem); color: var(--text-muted); margin-top: 0.5vh; font-weight: 600; }
+  @keyframes pulse { 50% { opacity: 0.4; } }
+
+  .progress-dots { display: flex; gap: 9px; justify-content: center; width: 100%; padding: 0.8vh 0; }
+  .progress-dots .dot {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: rgba(255,255,255,0.1); border: 2px solid var(--primary);
+    transition: 0.25s var(--ease-out);
+  }
+  .progress-dots .dot.done { background: var(--primary); }
+  .progress-dots .dot.active { background: var(--warning); border-color: var(--warning); transform: scale(1.3); }
+
+  .player-controls { display: flex; gap: 1.2vw; justify-content: center; align-items: center; padding: 0.6vh 0 0; }
+  .ctrl-btn {
+    background: var(--card-bg); color: white;
+    border: 2px solid rgba(76, 175, 80, 0.6);
+    padding: 1.1vh 1.8vw;
+    font-size: clamp(0.9rem, 1.15vw, 1.25rem);
+    border-radius: 14px; cursor: pointer;
+    font-family: inherit; font-weight: bold;
+    display: flex; align-items: center; gap: 0.5vw;
+    transition: all 0.18s var(--ease-out);
+  }
+  .ctrl-btn.primary { background: var(--primary); color: #050b11; border-color: var(--primary); padding: 1.1vh 2.5vw; }
+  .ctrl-btn.primary:focus, .ctrl-btn.primary:hover {
+    background: var(--warning); border-color: var(--warning); outline: none; transform: scale(1.04);
+  }
+  .ctrl-btn.subtle { border-color: rgba(255,255,255,0.18); color: var(--text-muted); }
+  .ctrl-btn:focus { outline: 3px solid var(--warning); outline-offset: 2px; }
+
+  #done { align-items: center; justify-content: space-between; text-align: center; padding: 1.5vh 0; }
+  #done h1 { font-size: clamp(2.2rem, 4.2vw, 3.8rem); margin: 0; color: var(--primary-light); }
+  #done p { font-size: clamp(1rem, 1.45vw, 1.55rem); color: var(--text-muted); margin: 0.4vh 0 0; }
+  .stats-box { display: flex; gap: 2vw; }
+  .stat-item {
+    background: var(--card-bg); border: 2px solid rgba(76, 175, 80, 0.4);
+    padding: 1.4vh 2.5vw; border-radius: 18px; min-width: 15vw;
+  }
+  .stat-val { font-size: clamp(1.6rem, 2.5vw, 2.6rem); font-weight: 900; color: var(--warning); }
+  .stat-lbl { font-size: clamp(0.85rem, 1.1vw, 1.2rem); color: var(--text-muted); }
+
+  .done-benefits {
+    width: min(92%, 1100px);
+    background: var(--card-bg);
+    border: 1.5px solid rgba(76, 175, 80, 0.35);
+    border-radius: 20px; padding: 1.6vh 2vw;
+  }
+  .done-benefits-title {
+    font-size: clamp(1rem, 1.35vw, 1.45rem); color: var(--primary-light);
+    font-weight: bold; margin-bottom: 1vh;
+  }
+  .done-benefits-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.8vh 1.2vw; }
+  .done-benefit {
+    display: flex; align-items: center; gap: 0.6vw;
+    font-size: clamp(0.9rem, 1.15vw, 1.25rem); color: var(--text-main); text-align: right;
+  }
+  .done-benefit .check { color: var(--primary); font-weight: 900; }
+
+  .big-btn {
+    background: var(--primary); color: #050b11; border: none;
+    padding: 1.5vh 3.8vw; font-size: clamp(1.05rem, 1.5vw, 1.6rem);
+    border-radius: 16px; cursor: pointer; font-weight: 800; font-family: inherit;
+    transition: all 0.2s var(--ease-out);
+  }
+  .big-btn:focus, .big-btn:hover {
+    outline: 4px solid #FFD54F; outline-offset: 3px;
+    transform: scale(1.04); background: var(--warning);
+  }
+
+  @media (max-width: 1050px) {
+    .routines { grid-template-columns: 1fr; overflow-y: auto; max-height: 68vh; }
+    .player-body { grid-template-columns: 1fr 1fr; }
+    .timer-panel { grid-column: span 2; flex-direction: row; padding: 1.2vh 2.5vw; }
+    .ring-container { width: 130px; height: 130px; }
+  }
+</style>
+</head>
+<body>
+<div class="ambient-glow"></div>
+
+<div class="app">
+
+  <section id="home" class="screen active">
+    <div class="top-bar">
+      <div class="top-stats-group">
+        <div class="streak-badge">
+          <span>🔥 الالتزام:</span>
+          <strong id="streakCount">0</strong>
+        </div>
+        <div class="week-strip" id="weekStrip" title="نشاطك خلال الأسبوع"></div>
+      </div>
+
+      <div class="top-actions">
+        <button id="voiceToggleHome" class="pill-btn active-toggle" type="button">
+          <span id="voiceIconHome">🔊</span>
+          <span id="voiceLabelHome">الموجه الصوتي: مفعل</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="home-center">
+      <div class="hero-header">
+        <h1>التمارين اليومية <span>الذكية</span></h1>
+        <div class="hero-sub" id="greetingSub">اختر الروتين المناسب لوقتك الآن وابدأ بضغطة زر</div>
+      </div>
+
+      <div class="routines">
+        <button class="routine-card" data-routine="morning" type="button">
+          <span class="done-badge">✓ مكتمل اليوم</span>
+          <div>
+            <div class="routine-card-head">
+              <div class="routine-title-group">
+                <span class="routine-emoji">☀️</span>
+                <span class="routine-title">الروتين الصباحي</span>
+              </div>
+              <span class="routine-meta">4 تمارين · 2:15 د</span>
+            </div>
+            <p class="routine-desc-short" style="margin:1vh 0;">تنشيط الدورة الدموية وفك تيبس المفاصل لبداية يوم نشيط.</p>
+            <div class="routine-preview-list">
+              <span class="preview-chip">1. إطالة الجسم</span>
+              <span class="preview-chip">2. السكوات الخفيف</span>
+              <span class="preview-chip">3. القطة والجمل</span>
+              <span class="preview-chip">4. رفع الركبتين</span>
+            </div>
+          </div>
+          <div class="start-cta">اضغط OK للتفاصيل والبدء ◀</div>
+        </button>
+
+        <button class="routine-card" data-routine="desk" type="button">
+          <span class="done-badge">✓ مكتمل اليوم</span>
+          <div>
+            <div class="routine-card-head">
+              <div class="routine-title-group">
+                <span class="routine-emoji">💻</span>
+                <span class="routine-title">راحة المكتب والظهر</span>
+              </div>
+              <span class="routine-meta">4 تمارين · 2:15 د</span>
+            </div>
+            <p class="routine-desc-short" style="margin:1vh 0;">فك تشنج الرقبة والأكتاف وأسفل الظهر بعد الجلوس الطويل.</p>
+            <div class="routine-preview-list">
+              <span class="preview-chip">1. إطالة الصدر والرقبة</span>
+              <span class="preview-chip">2. القطة والجمل</span>
+              <span class="preview-chip">3. تمرين الجسر</span>
+              <span class="preview-chip">4. إطالة الطفل</span>
+            </div>
+          </div>
+          <div class="start-cta">اضغط OK للتفاصيل والبدء ◀</div>
+        </button>
+
+        <button class="routine-card" data-routine="evening" type="button">
+          <span class="done-badge">✓ مكتمل اليوم</span>
+          <div>
+            <div class="routine-card-head">
+              <div class="routine-title-group">
+                <span class="routine-emoji">🌙</span>
+                <span class="routine-title">الروتين المسائي</span>
+              </div>
+              <span class="routine-meta">5 تمارين · 3:00 د</span>
+            </div>
+            <p class="routine-desc-short" style="margin:1vh 0;">تقوية العضلات الأساسية وتفريغ التوتر لنوم عميق ومريح.</p>
+            <div class="routine-preview-list">
+              <span class="preview-chip">1. تمرين الضغط</span>
+              <span class="preview-chip">2. تمرين الطعن</span>
+              <span class="preview-chip">3. الثبات (بلانك)</span>
+              <span class="preview-chip">4. تمرين الجسر</span>
+              <span class="preview-chip">5. إطالة الطفل</span>
+            </div>
+          </div>
+          <div class="start-cta">اضغط OK للتفاصيل والبدء ◀</div>
+        </button>
+      </div>
+    </div>
+
+    <div class="hint">
+      أسهم الريموت <strong>◀ ▶</strong> للتنقل · <strong>OK</strong> للفتح · السهم الأعلى <strong>↑</strong> لكتم/تشغيل الموجه الصوتي
+    </div>
+  </section>
+
+  <section id="intro" class="screen">
+    <div class="intro-top">
+      <span class="intro-emoji" id="introEmoji">☀️</span>
+      <h1 id="introTitle">الروتين الصباحي</h1>
+      <span class="intro-meta" id="introMeta">4 تمارين · 2:15 دقيقة</span>
+    </div>
+
+    <div class="goal-card">
+      <div class="goal-label">🎯 الهدف من هذا الروتين</div>
+      <p class="goal-text" id="introGoal"></p>
+    </div>
+
+    <div class="benefits-section">
+      <div class="benefits-title">✨ الفوائد المباشرة لجسمك</div>
+      <div class="benefits-grid" id="introBenefits"></div>
+    </div>
+
+    <div class="intro-controls">
+      <button id="introBackBtn" class="ctrl-btn subtle" type="button">↩ رجوع للرئيسية</button>
+      <button id="introStartBtn" class="ctrl-btn primary" type="button">▶ ابدأ الروتين الآن (OK)</button>
+    </div>
+  </section>
+
+  <section id="player" class="screen">
+    <div class="player-header">
+      <div class="header-right">
+        <strong id="routineLabel" style="color:#fff;"></strong>
+        <span id="wakeLockBadge" class="status-pill">📺 منع السكون</span>
+      </div>
+      <div class="header-left">
+        <span id="voiceStatusPlayer" class="status-pill active">🔊 الصوت مفعل (↑ للكتم)</span>
+        <strong id="exerciseCounter" style="color:var(--warning);"></strong>
+      </div>
+    </div>
+
+    <div class="player-body">
+      <div class="visual-panel" id="visualPanel">
+        <div class="visual-top-bar">
+          <span class="position-tag" id="exPosition">🧍 وضعية الوقوف</span>
+          <span class="muscle-tag" id="exMuscle">🎯 العضلات المستهدفة</span>
+        </div>
+        <div class="svg-stage" id="svgContainer"></div>
+        <div class="breath-widget">
+          <div class="breath-pacer">
+            <span class="breath-orb" id="breathOrb"></span>
+            <span class="breath-state-lbl" id="breathStateLbl">شهيق...</span>
+          </div>
+          <div class="breath-guide-text" id="exBreath">تنفس بانتظام</div>
+        </div>
+      </div>
+
+      <div class="details-panel">
+        <div>
+          <div class="phase-header">
+            <span class="phase-badge" id="phaseBadge">التمرين الحالي</span>
+            <span class="target-pill" id="exTarget"></span>
+          </div>
+          <h2 class="exercise-name" id="exName"></h2>
+          <div class="exercise-desc" id="exDesc"></div>
+        </div>
+
+        <div class="steps-box">
+          <div class="steps-title">📋 خطوات الأداء (تُضاء تلقائياً بالتتابع):</div>
+          <div class="step-item" id="stepBox0"><span class="step-num">1</span><span id="step1"></span></div>
+          <div class="step-item" id="stepBox1"><span class="step-num">2</span><span id="step2"></span></div>
+          <div class="step-item" id="stepBox2"><span class="step-num">3</span><span id="step3"></span></div>
+        </div>
+
+        <div class="next-up-bar">
+          <span>⏭ التمرين القادم: <strong id="nextExLabel"></strong></span>
+        </div>
+      </div>
+
+      <div class="timer-panel">
+        <div class="ring-container">
+          <svg class="ring-svg" viewBox="0 0 200 200">
+            <circle class="ring-bg" cx="100" cy="100" r="90"></circle>
+            <circle class="ring-progress" id="ringProgress" cx="100" cy="100" r="90"></circle>
+          </svg>
+          <div class="timer-center">
+            <div class="timer" id="timer">00:00</div>
+            <div class="timer-sublabel" id="timerSublabel">ثانية متبقية</div>
+          </div>
+        </div>
+
+        <div style="width:100%; text-align:center;">
+          <div style="font-size:clamp(0.8rem, 1vw, 1.1rem); color:var(--text-muted); margin-bottom:0.4vh;">تقدم التمارين</div>
+          <div class="progress-dots" id="progressDots"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="player-controls">
+      <button id="prevBtn" class="ctrl-btn" tabindex="-1" type="button">⏮ السابق (يمين)</button>
+      <button id="pauseBtn" class="ctrl-btn primary" tabindex="-1" type="button">⏸ إيقاف مؤقت (OK)</button>
+      <button id="nextBtn" class="ctrl-btn" tabindex="-1" type="button">تخطي للتالي (يسار) ⏭</button>
+      <button id="exitBtn" class="ctrl-btn subtle" tabindex="-1" type="button">✖ إنهاء (رجوع)</button>
+    </div>
+  </section>
+
+  <section id="done" class="screen">
+    <div>
+      <h1>🎉 أحسنت، أتممت التمرين بنجاح!</h1>
+      <p id="doneMsg"></p>
+    </div>
+
+    <div class="stats-box">
+      <div class="stat-item">
+        <div class="stat-val" id="doneExercisesCount">0</div>
+        <div class="stat-lbl">تمارين منجزة</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val" id="doneStreakVal">1</div>
+        <div class="stat-lbl">أيام الالتزام 🔥</div>
+      </div>
+    </div>
+
+    <div class="done-benefits">
+      <div class="done-benefits-title">💚 ما كسبه جسمك في هذه الجلسة</div>
+      <div class="done-benefits-grid" id="doneBenefits"></div>
+    </div>
+
+    <button id="homeBtn" class="big-btn" type="button">العودة للشاشة الرئيسية (OK)</button>
+  </section>
+
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  /* ===== الرسومات التوضيحية ===== */
+  const ILLUSTRATIONS = {
+    stretch: `<svg viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="120" cy="212" rx="65" ry="10" fill="rgba(76,175,80,0.18)"/>
+      <line x1="45" y1="212" x2="195" y2="212" stroke="#4CAF50" stroke-width="5" stroke-linecap="round"/>
+      <g opacity="0.65">
+        <animate attributeName="opacity" values="0.35;1;0.35" dur="3s" repeatCount="indefinite"/>
+        <path d="M55 75 L55 30 M46 40 L55 28 L64 40" stroke="#FFC107" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M185 75 L185 30 M176 40 L185 28 L194 40" stroke="#FFC107" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <circle cx="120" cy="92" r="18" fill="#FF5252" opacity="0.5">
+        <animate attributeName="opacity" values="0.3;0.85;0.3" dur="3s" repeatCount="indefinite"/>
+        <animate attributeName="r" values="16;22;16" dur="3s" repeatCount="indefinite"/>
+      </circle>
+      <line x1="108" y1="142" x2="100" y2="208" stroke="#388E3C" stroke-width="12" stroke-linecap="round"/>
+      <line x1="132" y1="142" x2="140" y2="208" stroke="#4CAF50" stroke-width="12" stroke-linecap="round"/>
+      <g>
+        <animateTransform attributeName="transform" type="translate" values="0 0; 0 -4; 0 0" dur="3s" repeatCount="indefinite"/>
+        <line x1="120" y1="84" x2="120" y2="144" stroke="#8BC34A" stroke-width="16" stroke-linecap="round"/>
+        <circle cx="120" cy="60" r="16" fill="#172a3c" stroke="#8BC34A" stroke-width="7"/>
+        <g>
+          <path d="M108 86 Q88 50 96 20" stroke="#4CAF50" stroke-width="10" stroke-linecap="round" fill="none"/>
+          <animateTransform attributeName="transform" type="rotate" values="-3 108 86; 6 108 86; -3 108 86" dur="3s" repeatCount="indefinite"/>
+        </g>
+        <g>
+          <path d="M132 86 Q152 50 144 20" stroke="#8BC34A" stroke-width="10" stroke-linecap="round" fill="none"/>
+          <animateTransform attributeName="transform" type="rotate" values="3 132 86; -6 132 86; 3 132 86" dur="3s" repeatCount="indefinite"/>
+        </g>
+      </g>
+    </svg>`,
+
+    squat: `<svg viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="125" cy="212" rx="70" ry="10" fill="rgba(76,175,80,0.18)"/>
+      <line x1="40" y1="212" x2="200" y2="212" stroke="#4CAF50" stroke-width="5" stroke-linecap="round"/>
+      <line x1="65" y1="158" x2="105" y2="158" stroke="rgba(255,193,7,0.45)" stroke-width="3" stroke-dasharray="6 4"/>
+      <path d="M52 95 L52 150 M44 138 L52 150 L60 138" stroke="#FFC107" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+        <animate attributeName="opacity" values="0.4;1;0.4" dur="2.4s" repeatCount="indefinite"/>
+      </path>
+      <circle cx="112" cy="150" r="18" fill="#FF5252" opacity="0.5">
+        <animate attributeName="opacity" values="0.3;0.8;0.3" dur="2.4s" repeatCount="indefinite"/>
+        <animate attributeName="cx" values="112;123;112" dur="2.4s" repeatCount="indefinite"/>
+        <animate attributeName="cy" values="150;169;150" dur="2.4s" repeatCount="indefinite"/>
+      </circle>
+      <line x1="138" y1="208" x2="128" y2="164" stroke="#388E3C" stroke-width="11" stroke-linecap="round"/>
+      <line x1="146" y1="208" x2="134" y2="164" stroke="#4CAF50" stroke-width="12" stroke-linecap="round"/>
+      <polyline stroke="#8BC34A" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" fill="none">
+        <animate attributeName="points" values="92,136 134,164 146,208; 92,165 155,172 146,208; 92,136 134,164 146,208" dur="2.4s" repeatCount="indefinite"/>
+      </polyline>
+      <g>
+        <animateTransform attributeName="transform" type="translate" values="0 0; 0 29; 0 0" dur="2.4s" repeatCount="indefinite"/>
+        <g>
+          <animateTransform attributeName="transform" type="rotate" values="0 92 136; 8 92 136; 0 92 136" dur="2.4s" repeatCount="indefinite"/>
+          <line x1="92" y1="136" x2="108" y2="76" stroke="#4CAF50" stroke-width="15" stroke-linecap="round"/>
+          <circle cx="114" cy="52" r="15" fill="#172a3c" stroke="#8BC34A" stroke-width="7"/>
+          <line x1="106" y1="84" x2="168" y2="84" stroke="#8BC34A" stroke-width="10" stroke-linecap="round"/>
+        </g>
+      </g>
+    </svg>`,
+
+    catcow: `<svg viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="120" cy="200" rx="80" ry="10" fill="rgba(76,175,80,0.18)"/>
+      <line x1="30" y1="200" x2="210" y2="200" stroke="#4CAF50" stroke-width="5" stroke-linecap="round"/>
+      <path d="M122 52 L122 88 M114 62 L122 50 L130 62 M114 78 L122 90 L130 78" stroke="#FFC107" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+        <animate attributeName="opacity" values="0.4;1;0.4" dur="3s" repeatCount="indefinite"/>
+      </path>
+      <circle cx="122" cy="112" r="20" fill="#FF5252" opacity="0.5">
+        <animate attributeName="opacity" values="0.3;0.85;0.3" dur="3s" repeatCount="indefinite"/>
+        <animate attributeName="cy" values="100;130;100" dur="3s" repeatCount="indefinite"/>
+      </circle>
+      <polyline points="75,125 75,195 45,195" stroke="#4CAF50" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="170" y1="120" x2="170" y2="195" stroke="#4CAF50" stroke-width="12" stroke-linecap="round"/>
+      <path d="M 75 125 Q 125 75 170 120" stroke="#8BC34A" stroke-width="15" stroke-linecap="round" fill="none">
+        <animate attributeName="d" values="M 75 125 Q 125 75 170 120; M 75 125 Q 125 152 170 120; M 75 125 Q 125 75 170 120" keyTimes="0; 0.5; 1" dur="3s" repeatCount="indefinite"/>
+      </path>
+      <g>
+        <circle cx="190" cy="115" r="14" fill="#172a3c" stroke="#8BC34A" stroke-width="7"/>
+        <animateTransform attributeName="transform" type="rotate" values="12 175 115; -12 175 115; 12 175 115" dur="3s" repeatCount="indefinite"/>
+      </g>
+    </svg>`,
+
+    highknees: `<svg viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="120" cy="212" rx="65" ry="10" fill="rgba(76,175,80,0.18)"/>
+      <line x1="45" y1="212" x2="195" y2="212" stroke="#4CAF50" stroke-width="5" stroke-linecap="round"/>
+      <line x1="135" y1="130" x2="195" y2="130" stroke="#FFC107" stroke-width="3" stroke-dasharray="6 4"/>
+      <path d="M180 170 L180 135 M172 145 L180 135 L188 145" stroke="#FFC107" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+        <animate attributeName="opacity" values="0.4;1;0.4" dur="1.2s" repeatCount="indefinite"/>
+      </path>
+      <circle cx="118" cy="128" r="18" fill="#FF5252" opacity="0.5">
+        <animate attributeName="opacity" values="0.3;0.8;0.3" dur="1.2s" repeatCount="indefinite"/>
+      </circle>
+      <polyline stroke="#388E3C" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none">
+        <animate attributeName="points" values="118,132 105,178 105,208; 118,132 160,128 160,168; 118,132 105,178 105,208" dur="2.4s" repeatCount="indefinite"/>
+      </polyline>
+      <polyline stroke="#8BC34A" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" fill="none">
+        <animate attributeName="points" values="118,132 160,128 160,168; 118,132 105,178 105,208; 118,132 160,128 160,168" dur="2.4s" repeatCount="indefinite"/>
+      </polyline>
+      <line x1="118" y1="74" x2="118" y2="134" stroke="#4CAF50" stroke-width="16" stroke-linecap="round"/>
+      <circle cx="118" cy="50" r="15" fill="#172a3c" stroke="#8BC34A" stroke-width="7"/>
+      <polyline stroke="#388E3C" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" fill="none">
+        <animate attributeName="points" values="118,86 148,104 165,92; 118,86 92,108 78,96; 118,86 148,104 165,92" dur="2.4s" repeatCount="indefinite"/>
+      </polyline>
+      <polyline stroke="#8BC34A" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" fill="none">
+        <animate attributeName="points" values="118,86 92,108 78,96; 118,86 148,104 165,92; 118,86 92,108 78,96" dur="2.4s" repeatCount="indefinite"/>
+      </polyline>
+    </svg>`,
+
+    pushup: `<svg viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="120" cy="200" rx="85" ry="10" fill="rgba(76,175,80,0.18)"/>
+      <line x1="25" y1="200" x2="215" y2="200" stroke="#4CAF50" stroke-width="5" stroke-linecap="round"/>
+      <path d="M135 82 L135 120 M127 110 L135 120 L143 110" stroke="#FFC107" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+        <animate attributeName="opacity" values="0.4;1;0.4" dur="2s" repeatCount="indefinite"/>
+      </path>
+      <circle cx="165" cy="128" r="18" fill="#FF5252" opacity="0.5">
+        <animate attributeName="opacity" values="0.3;0.85;0.3" dur="2s" repeatCount="indefinite"/>
+        <animate attributeName="cy" values="128;152;128" dur="2s" repeatCount="indefinite"/>
+      </circle>
+      <line x1="45" y1="192" x2="172" y2="122" stroke="#8BC34A" stroke-width="15" stroke-linecap="round">
+        <animate attributeName="y2" values="122; 148; 122" dur="2s" repeatCount="indefinite"/>
+      </line>
+      <circle cx="192" cy="112" r="14" fill="#172a3c" stroke="#8BC34A" stroke-width="7">
+        <animate attributeName="cy" values="112; 138; 112" dur="2s" repeatCount="indefinite"/>
+      </circle>
+      <polyline stroke="#4CAF50" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" fill="none">
+        <animate attributeName="points" values="172,122 161,155 168,195; 172,148 141,165 168,195; 172,122 161,155 168,195" dur="2s" repeatCount="indefinite"/>
+      </polyline>
+    </svg>`,
+
+    lunge: `<svg viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="120" cy="212" rx="80" ry="10" fill="rgba(76,175,80,0.18)"/>
+      <line x1="30" y1="212" x2="210" y2="212" stroke="#4CAF50" stroke-width="5" stroke-linecap="round"/>
+      <path d="M75 75 L75 118 M67 108 L75 118 L83 108" stroke="#FFC107" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+        <animate attributeName="opacity" values="0.4;1;0.4" dur="2.4s" repeatCount="indefinite"/>
+      </path>
+      <circle cx="145" cy="148" r="18" fill="#FF5252" opacity="0.5">
+        <animate attributeName="opacity" values="0.3;0.8;0.3" dur="2.4s" repeatCount="indefinite"/>
+        <animate attributeName="cy" values="148;168;148" dur="2.4s" repeatCount="indefinite"/>
+      </circle>
+      <polyline stroke="#388E3C" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none">
+        <animate attributeName="points" values="118,136 88,175 52,196; 118,160 88,183 52,196; 118,136 88,175 52,196" dur="2.4s" repeatCount="indefinite"/>
+      </polyline>
+      <polyline stroke="#8BC34A" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" fill="none">
+        <animate attributeName="points" values="118,136 150,160 164,196; 118,160 155,168 164,196; 118,136 150,160 164,196" dur="2.4s" repeatCount="indefinite"/>
+      </polyline>
+      <g>
+        <animateTransform attributeName="transform" type="translate" values="0 0; 0 24; 0 0" dur="2.4s" repeatCount="indefinite"/>
+        <line x1="118" y1="72" x2="118" y2="136" stroke="#4CAF50" stroke-width="16" stroke-linecap="round"/>
+        <circle cx="118" cy="48" r="15" fill="#172a3c" stroke="#8BC34A" stroke-width="7"/>
+        <polyline points="118,86 98,108 114,122" stroke="#8BC34A" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </g>
+    </svg>`,
+
+    plank: `<svg viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="120" cy="200" rx="85" ry="10" fill="rgba(76,175,80,0.18)"/>
+      <line x1="25" y1="200" x2="215" y2="200" stroke="#4CAF50" stroke-width="5" stroke-linecap="round"/>
+      <line x1="45" y1="168" x2="175" y2="122" stroke="#FFC107" stroke-width="3" stroke-dasharray="6 5">
+        <animate attributeName="opacity" values="0.5;1;0.5" dur="4s" repeatCount="indefinite"/>
+      </line>
+      <g>
+        <animateTransform attributeName="transform" type="translate" values="0 0; 0 1.5; 0 0" dur="4s" repeatCount="indefinite"/>
+        <circle cx="115" cy="158" r="20" fill="#FF5252" opacity="0.5">
+          <animate attributeName="opacity" values="0.35;0.75;0.35" dur="4s" repeatCount="indefinite"/>
+        </circle>
+        <line x1="45" y1="188" x2="168" y2="142" stroke="#8BC34A" stroke-width="15" stroke-linecap="round"/>
+        <polyline points="158,146 158,194 186,194" stroke="#4CAF50" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="188" cy="136" r="14" fill="#172a3c" stroke="#8BC34A" stroke-width="7"/>
+      </g>
+    </svg>`,
+
+    bridge: `<svg viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="120" cy="200" rx="85" ry="10" fill="rgba(76,175,80,0.18)"/>
+      <line x1="25" y1="200" x2="215" y2="200" stroke="#4CAF50" stroke-width="5" stroke-linecap="round"/>
+      <path d="M110 110 L110 72 M102 82 L110 72 L118 82" stroke="#FFC107" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+        <animate attributeName="opacity" values="0.4;1;0.4" dur="2.4s" repeatCount="indefinite"/>
+      </path>
+      <circle cx="184" cy="188" r="13" fill="#172a3c" stroke="#8BC34A" stroke-width="6"/>
+      <line x1="165" y1="192" x2="115" y2="194" stroke="rgba(139,195,74,0.6)" stroke-width="9" stroke-linecap="round"/>
+      <circle cx="112" cy="178" r="18" fill="#FF5252" opacity="0.5">
+        <animate attributeName="opacity" values="0.3;0.85;0.3" dur="2.4s" repeatCount="indefinite"/>
+        <animate attributeName="cy" values="178;140;178" dur="2.4s" repeatCount="indefinite"/>
+      </circle>
+      <polyline stroke="#8BC34A" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" fill="none">
+        <animate attributeName="points" values="168,192 110,178 95,195; 168,192 105,140 95,195; 168,192 110,178 95,195" dur="2.4s" repeatCount="indefinite"/>
+      </polyline>
+      <line x1="95" y1="195" x2="58" y2="194" stroke="#388E3C" stroke-width="11" stroke-linecap="round"/>
+    </svg>`,
+
+    childpose: `<svg viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="120" cy="200" rx="85" ry="10" fill="rgba(76,175,80,0.18)"/>
+      <line x1="25" y1="200" x2="215" y2="200" stroke="#4CAF50" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="105" cy="148" r="20" fill="#29B6F6" opacity="0.5">
+        <animate attributeName="opacity" values="0.35;0.85;0.35" dur="4s" repeatCount="indefinite"/>
+        <animate attributeName="r" values="18;22;18" dur="4s" repeatCount="indefinite"/>
+      </circle>
+      <polyline points="55,192 108,192 68,158" stroke="#4CAF50" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M68 158 Q108 126 152 174" stroke="#8BC34A" stroke-width="15" stroke-linecap="round" fill="none">
+        <animate attributeName="d" values="M68 158 Q108 126 152 174; M68 158 Q108 120 152 172; M68 158 Q108 126 152 174" dur="4s" repeatCount="indefinite"/>
+      </path>
+      <circle cx="164" cy="178" r="13" fill="#172a3c" stroke="#8BC34A" stroke-width="6"/>
+      <line x1="148" y1="176" x2="205" y2="192" stroke="#8BC34A" stroke-width="11" stroke-linecap="round"/>
+    </svg>`
+  };
+
+  const PREP_SECONDS = 6;
+  const PREP_SECONDS_SHORT = 3;
+  const RING_CIRCUMFERENCE = 2 * Math.PI * 90;
+
+  /* ===== بيانات الروتينات الثلاثة ===== */
+  const ROUTINES = {
+    morning: {
+      name: 'الروتين الصباحي ☀️',
+      spokenName: 'الروتين الصباحي',
+      emoji: '☀️',
+      meta: '4 تمارين · 2:15 دقيقة',
+      goal: 'إيقاظ الجسم بعد ساعات النوم، تنشيط الدورة الدموية، وتهيئة العضلات والمفاصل ليوم مليء بالنشاط والتركيز.',
+      benefits: [
+        'تنشيط الدورة الدموية ورفع اليقظة الذهنية',
+        'تحسين مرونة العمود الفقري وتخفيف تيبس الصباح',
+        'تقوية عضلات الأرجل والفخذين تدريجياً',
+        'تحسين المزاج وتقليل الخمول والكسل'
+      ],
+      exercises: [
+        {
+          name: 'إطالة ومد الجسم بالكامل',
+          desc: 'تنشيط فقرات العمود الفقري والأكتاف وإيقاظ العضلات',
+          target: '30 ثانية', seconds: 30, svg: 'stretch',
+          position: '🧍 وضعية الوقوف',
+          muscle: '🎯 الظهر والأكتاف',
+          breath: 'شهيق عميق عند رفع اليدين · زفير بطيء عند الإرخاء',
+          steps: [
+            'قف مستقيماً وباعد بين قدميك بعرض الكتفين.',
+            'ارفع ذراعيك عالياً فوق رأسك ومدّ أصابعك نحو السقف.',
+            'خذ نفساً عميقاً واثبت مع التمدد اللطيف دون حبس النفس.'
+          ]
+        },
+        {
+          name: 'السكوات الخفيف',
+          desc: 'تحريك عضلات الفخذين وتنشيط الدورة الدموية في الجزء السفلي',
+          target: '15 تكرار', seconds: 30, svg: 'squat',
+          position: '🧍 وضعية الوقوف',
+          muscle: '🎯 الفخذين والأرداف',
+          breath: 'شهيق أثناء النزول · زفير عند الصعود والوقوف',
+          steps: [
+            'قف وقدميك بعرض الكتفين، وافرد ذراعيك للأمام للتوازن.',
+            'ادفع حوضك للخلف وانزل ببطء كأنك تجلس على كرسي.',
+            'أبقِ ظهرك مستقيماً وكعبيك على الأرض، ثم اصعد بهدوء.'
+          ]
+        },
+        {
+          name: 'القطة والجمل',
+          desc: 'مرونة العمود الفقري وتخفيف تيبس الظهر والرقبة بعد النوم',
+          target: '10 تكرارات', seconds: 30, svg: 'catcow',
+          position: '🧎 ارتكاز على الركبتين واليدين',
+          muscle: '🎯 العمود الفقري والرقبة',
+          breath: 'شهيق عند إنزال البطن · زفير عند تقويس الظهر للأعلى',
+          steps: [
+            'ارتكز على يديك وركبتيك بحيث تكون اليدان تحت الكتفين مباشرة.',
+            'قوّس ظهرك للأعلى نحو السقف وأحنِ رأسك للأسفل ببطء.',
+            'اعكس الحركة بإنزال بطنك للأسفل ورفع رأسك للأمام بهدوء.'
+          ]
+        },
+        {
+          name: 'المشي في المكان برفع الركبتين',
+          desc: 'رفع معدل ضربات القلب بشكل خفيف وتنشيط كامل الجسم',
+          target: '45 ثانية', seconds: 45, svg: 'highknees',
+          position: '🧍 وضعية الوقوف الحركي',
+          muscle: '🎯 القلب والأرجل والجذع',
+          breath: 'تنفس إيقاعي منتظم من الأنف والفم طوال التمرين',
+          steps: [
+            'قف بقامة مستقيمة وشد عضلات البطن قليلاً.',
+            'ارفع ركبتك اليمنى حتى تقترب من مستوى الخصر ثم أنزلها.',
+            'بدّل بين الركبتين بإيقاع نشيط مع تحريك الذراعين بالتبادل.'
+          ]
+        }
+      ]
+    },
+
+    desk: {
+      name: 'راحة المكتب والظهر 💻',
+      spokenName: 'روتين راحة المكتب والظهر',
+      emoji: '💻',
+      meta: '4 تمارين · 2:15 دقيقة',
+      goal: 'إزالة تشنج الرقبة والأكتاف وفك ضغط فقرات أسفل الظهر الناتج عن الجلوس الطويل أمام الشاشات.',
+      benefits: [
+        'فك تيبس الرقبة والأكتاف وفتح القفص الصدري',
+        'إعادة ترطيب ومرونة فقرات العمود الفقري',
+        'تنشيط عضلات الحوض وأسفل الظهر الخاملة أثناء الجلوس',
+        'تهدئة إجهاد العينين والجهاز العصبي'
+      ],
+      exercises: [
+        {
+          name: 'إطالة وفتح الصدر والأكتاف',
+          desc: 'معاكسة انحناء الجلوس الطويل وفتح القفص الصدري للتنفس العميق',
+          target: '30 ثانية', seconds: 30, svg: 'stretch',
+          position: '🧍 وضعية الوقوف',
+          muscle: '🎯 الرقبة والأكتاف والصدر',
+          breath: 'شهيق عميق لملء الصدر · زفير طويل لإرخاء الكتفين',
+          steps: [
+            'قف مستقيماً وأرجع كتفيك للخلف وللأسفل بعيداً عن أذنيك.',
+            'ارفع ذراعيك للأعلى وللخلف قليلاً لفتح منطقة الصدر.',
+            'تنفس بعمق واشعر بتمدد عضلات الصدر والرقبة.'
+          ]
+        },
+        {
+          name: 'القطة والجمل لفقرات الظهر',
+          desc: 'تحريك كل فقرة من فقرات الظهر بلطف لإزالة تيبس الجلوس',
+          target: '10 تكرارات', seconds: 30, svg: 'catcow',
+          position: '🧎 ارتكاز على الركبتين واليدين',
+          muscle: '🎯 كامل العمود الفقري',
+          breath: 'شهيق عند فتح الصدر للأمام · زفير عند تقويس الظهر',
+          steps: [
+            'ارتكز على يديك وركبتيك على سجادة مريحة.',
+            'ارفع وسط ظهرك نحو السقف وأرخِ رقبتك تماماً.',
+            'أنزل بطنك ببطء وارفع صدرك للأمام مع التنفس الهادئ.'
+          ]
+        },
+        {
+          name: 'تمرين الجسر لتنشيط الحوض',
+          desc: 'إعادة تنشيط العضلات الخلفية وأسفل الظهر بعد ساعات الجلوس',
+          target: '12 تكرار', seconds: 30, svg: 'bridge',
+          position: '🛌 استلقاء على الظهر',
+          muscle: '🎯 أسفل الظهر والحوض',
+          breath: 'زفير عند رفع الحوض · شهيق عند النزول البطيء',
+          steps: [
+            'استلقِ على ظهرك واثنِ ركبتيك مع تثبيت القدمين.',
+            'ارفع حوضك للأعلى حتى يشكل جسمك خطاً مائلاً مستقيماً.',
+            'اثبت لثانية في الأعلى ثم انزل بفقرات ظهرك بهدوء.'
+          ]
+        },
+        {
+          name: 'إطالة الطفل للاسترخاء الكامل',
+          desc: 'إطالة مريحة لأسفل الظهر والأكتاف وتفريغ ضغط العمل',
+          target: '45 ثانية', seconds: 45, svg: 'childpose',
+          position: '🧎 جلوس استرخاء أرضي',
+          muscle: '🎯 أسفل الظهر والأكتاف',
+          breath: 'أنفاس بطيئة وعميقة جداً من الأنف',
+          steps: [
+            'اجلس على ركبتيك وأرجع حوضك فوق كعبيك.',
+            'مدّ ذراعيك للأمام على الأرض وأرح رأسك برفق.',
+            'اترك ثقلك يهبط للأرض واستمتع بتمدد الظهر.'
+          ]
+        }
+      ]
+    },
+
+    evening: {
+      name: 'الروتين المسائي 🌙',
+      spokenName: 'الروتين المسائي',
+      emoji: '🌙',
+      meta: '5 تمارين · 3:00 دقيقة',
+      goal: 'تفريغ توتر اليوم، تقوية العضلات الأساسية الداعمة للظهر، وتهيئة الجهاز العصبي لنوم عميق ومريح.',
+      benefits: [
+        'تقوية الصدر والكتفين والذراعين بشكل متوازن',
+        'تحسين توازن الأرجل والمفاصل والوقاية من الإصابات',
+        'تقوية عضلات البطن والجذع الداعمة للعمود الفقري',
+        'استرخاء الجهاز العصبي وتحسين جودة النوم'
+      ],
+      exercises: [
+        {
+          name: 'تمرين الضغط (Push-ups)',
+          desc: 'تقوية عضلات الصدر والأكتاف والذراعين (يمكن أداؤه على الركبتين)',
+          target: '10 تكرارات', seconds: 30, svg: 'pushup',
+          position: '🤸 ارتكاز أمامي (أو على الركبتين)',
+          muscle: '🎯 الصدر والأكتاف والذراعين',
+          breath: 'شهيق عند النزول بالصدر · زفير عند الدفع للأعلى',
+          steps: [
+            'ضع يديك على الأرض بعرض أوسع قليلاً من الكتفين.',
+            'حافظ على استقامة جسمك (أو ضع ركبتيك على الأرض لتسهيل التمرين).',
+            'انزل بصدرك نحو الأرض ببطء ثم ادفع جسمك للأعلى.'
+          ]
+        },
+        {
+          name: 'تمرين الطعن (Lunges)',
+          desc: 'تقوية وتوازن عضلات الأرجل والفخذين والمفاصل',
+          target: '10 تكرارات', seconds: 30, svg: 'lunge',
+          position: '🧍 وضعية الوقوف (خطوة للأمام)',
+          muscle: '🎯 الفخذ الأمامي والأرداف',
+          breath: 'شهيق عند النزول · زفير عند الرجوع لوضعية الوقوف',
+          steps: [
+            'قف مستقيماً وضع يديك على خصرك للحفاظ على التوازن.',
+            'تقدم خطوة واسعة للأمام بإحدى قدميك وانزل بحوضك عمودياً.',
+            'توقف عندما تصبح الركبة الأمامية بزاوية 90 درجة، ثم ارجع وبدّل القدم.'
+          ]
+        },
+        {
+          name: 'تمرين الثبات (بلانك)',
+          desc: 'شد وتقوية عضلات البطن العميقة والجذع وأسفل الظهر',
+          target: '30 ثانية', seconds: 30, svg: 'plank',
+          position: '🤸 ارتكاز على الساعدين',
+          muscle: '🎯 البطن والجذع (Core)',
+          breath: 'تنفس هادئ ومستمر — لا تحبس أنفاسك أثناء الثبات',
+          steps: [
+            'ارتكز على ساعديك وأطراف أصابع قدميك بحيث يكون المرفق تحت الكتف.',
+            'اجعل جسمك خطاً مستقيماً تماماً من الرأس حتى الكعبين.',
+            'شد عضلات البطن ولا تدع حوضك يهبط للأسفل أو يرتفع كثيراً.'
+          ]
+        },
+        {
+          name: 'تمرين الجسر (Glute Bridge)',
+          desc: 'تقوية أسفل الظهر والعضلات الخلفية وفك تيبس الحوض',
+          target: '12 تكرار', seconds: 30, svg: 'bridge',
+          position: '🛌 استلقاء على الظهر',
+          muscle: '🎯 أسفل الظهر والأرداف',
+          breath: 'زفير عند رفع الحوض للأعلى · شهيق عند النزول',
+          steps: [
+            'استلقِ على ظهرك واثنِ ركبتيك مع تثبيت القدمين على الأرض.',
+            'ضع ذراعيك بجانب جسمك وادفع بكعبيك لرفع حوضك للأعلى.',
+            'اثبت لثانية واحدة في الأعلى ثم انزل ببطء وتحكم.'
+          ]
+        },
+        {
+          name: 'إطالة الطفل (Child Pose)',
+          desc: 'إرخاء الأعصاب والظهر بالكامل وتجهيز الجسم لنوم عميق',
+          target: 'دقيقة واحدة', seconds: 60, svg: 'childpose',
+          position: '🧎 جلوس استرخاء أرضي',
+          muscle: '🎯 استرخاء كامل الظهر والأكتاف',
+          breath: 'أنفاس عميقة وبطيئة جداً لإرخاء العضلات',
+          steps: [
+            'اجلس على ركبتيك وأرجع حوضك ليستقر فوق كعبيك.',
+            'مدّ ذراعيك للأمام على الأرض وأرح جبهتك برفق.',
+            'أرخِ كتفيك وأسفل ظهرك تماماً وتنفس بعمق وهدوء.'
+          ]
+        }
+      ]
+    }
+  };
+
+  /* ===== الحالة ===== */
+  const state = {
+    screen: 'home',
+    routineKey: null,
+    routine: null,
+    index: 0,
+    phase: 'prep',
+    remaining: 0,
+    totalPhaseSeconds: PREP_SECONDS,
+    phaseEndTime: 0,
+    pausedRemainingMs: 0,
+    paused: false,
+    rafHandle: null,
+    endTimeout: null,
+    breathInterval: null,
+    inhalePhase: true,
+    lastRenderedSec: -1,
+    voiceEnabled: loadVoicePref(),
+    arabicVoiceAvailable: false,
+    wakeLock: null
+  };
+
+  const $ = (id) => document.getElementById(id);
+
+  /* ===== الصوت والنطق ===== */
+  function checkArabicVoice() {
+    if (!('speechSynthesis' in window)) { state.arabicVoiceAvailable = false; return false; }
+    const voices = window.speechSynthesis.getVoices();
+    state.arabicVoiceAvailable = voices.some(v => v.lang && v.lang.toLowerCase().startsWith('ar'));
+    return state.arabicVoiceAvailable;
+  }
+  function loadVoicePref() {
+    try { const v = localStorage.getItem('tv-fitness-voice'); return v === null ? true : v === 'true'; }
+    catch (e) { return true; }
+  }
+  function saveVoicePref(val) {
+    try { localStorage.setItem('tv-fitness-voice', String(val)); } catch (e) {}
+  }
+  function speakArabic(text) {
+    if (!state.voiceEnabled || !state.arabicVoiceAvailable || !('speechSynthesis' in window)) return;
+    try {
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = 'ar-SA'; utter.rate = 0.98;
+      const voices = window.speechSynthesis.getVoices();
+      const arVoice = voices.find(v => v.lang && v.lang.toLowerCase().startsWith('ar'));
+      if (arVoice) utter.voice = arVoice;
+      window.speechSynthesis.speak(utter);
+    } catch (e) {}
+  }
+  function stopSpeaking() {
+    try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch (e) {}
+  }
+  function toggleVoice() {
+    if (!state.arabicVoiceAvailable) return;
+    state.voiceEnabled = !state.voiceEnabled;
+    saveVoicePref(state.voiceEnabled);
+    updateVoiceUI();
+    if (state.voiceEnabled) { playTone(880, 120, 0.08, 'triangle'); speakArabic('تم تفعيل الموجه الصوتي'); }
+    else { stopSpeaking(); playTone(440, 100, 0.06, 'sine'); }
+  }
+  function updateVoiceUI() {
+    const noVoice = !state.arabicVoiceAvailable;
+    const icon = (noVoice || !state.voiceEnabled) ? '🔇' : '🔊';
+    const homeLbl = noVoice ? 'النطق العربي غير مثبت'
+                            : (state.voiceEnabled ? 'الموجه الصوتي: مفعل' : 'الموجه الصوتي: مكتوم');
+    const playerLbl = noVoice ? '🔇 النطق غير متوفر'
+                              : (state.voiceEnabled ? '🔊 الصوت مفعل (↑ للكتم)' : '🔇 الصوت مكتوم (↑ للتفعيل)');
+    $('voiceIconHome').textContent = icon;
+    $('voiceLabelHome').textContent = homeLbl;
+    $('voiceToggleHome').classList.toggle('active-toggle', state.voiceEnabled && !noVoice);
+    $('voiceToggleHome').disabled = noVoice;
+    const p = $('voiceStatusPlayer');
+    p.textContent = playerLbl;
+    p.classList.toggle('active', state.voiceEnabled && !noVoice);
+    p.classList.toggle('warn', noVoice);
+  }
+
+  /* ===== المؤثرات الصوتية ===== */
+  let audioCtx = null;
+  function playTone(freq, durMs, vol = 0.08, type = 'sine') {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const now = audioCtx.currentTime;
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = type;
+      o.frequency.setValueAtTime(freq, now);
+      g.gain.setValueAtTime(0.001, now);
+      g.gain.linearRampToValueAtTime(vol, now + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + durMs / 1000);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(now); o.stop(now + durMs / 1000);
+    } catch (e) {}
+  }
+  function startSound() {
+    playTone(587.33, 140, 0.08, 'triangle');
+    setTimeout(() => playTone(880, 220, 0.1, 'triangle'), 110);
+  }
+  function chimeVictory() {
+    playTone(523.25, 160, 0.09, 'triangle');
+    setTimeout(() => playTone(659.25, 180, 0.09, 'triangle'), 140);
+    setTimeout(() => playTone(783.99, 220, 0.1, 'triangle'), 280);
+    setTimeout(() => playTone(1046.5, 400, 0.12, 'triangle'), 440);
+  }
+
+  /* ===== Wake Lock ===== */
+  async function requestWakeLock() {
+    const badge = $('wakeLockBadge');
+    if (!('wakeLock' in navigator) || !window.isSecureContext) {
+      badge.textContent = '📺 عرض نشط';
+      return;
+    }
+    if (state.wakeLock && !state.wakeLock.released) return;
+    try {
+      state.wakeLock = await navigator.wakeLock.request('screen');
+      badge.textContent = '🔒 الشاشة مضاءة دائماً';
+      badge.classList.add('active');
+      state.wakeLock.addEventListener('release', () => {
+        badge.classList.remove('active');
+        state.wakeLock = null;
+      });
+    } catch (err) {
+      badge.textContent = '📺 الشاشة نشطة';
+    }
+  }
+  async function releaseWakeLock() {
+    try { if (state.wakeLock) { await state.wakeLock.release(); state.wakeLock = null; } } catch (e) {}
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    if (state.screen === 'player') requestWakeLock();
+    if (state.screen !== 'player' || state.paused || !state.routine) return;
+
+    if (state.phaseEndTime && performance.now() >= state.phaseEndTime && !state.endTimeout) {
+      if (state.phase === 'prep') startWorkPhase();
+      else advanceToNextExercise();
+    } else if (!state.rafHandle && !state.endTimeout) {
+      state.rafHandle = requestAnimationFrame(loopFrame);
+    }
+  });
+
+  /* ===== الشاشات ===== */
+  function showScreen(name, pushHistory = false) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    $(name).classList.add('active');
+    state.screen = name;
+    if (name !== 'player') document.body.classList.remove('prep-ambient');
+    if (pushHistory) {
+      try { history.pushState({ screen: name }, '', '#' + name); } catch (e) {}
+    }
+    setTimeout(() => {
+      if (name === 'home') {
+        const preferred = getRecommendedRoutineKey();
+        const card = document.querySelector(`.routine-card[data-routine="${preferred}"]`) || document.querySelector('.routine-card');
+        if (card) card.focus();
+      } else if (name === 'intro') {
+        $('introStartBtn').focus();
+      } else if (name === 'done') {
+        $('homeBtn').focus();
+      }
+    }, 40);
+  }
+
+  window.addEventListener('popstate', () => {
+    if (state.screen === 'player' || state.screen === 'intro' || state.screen === 'done') {
+      exitPlayer(false);
+    }
+  });
+
+  function cycleFocus(dir) {
+    const els = Array.from(document.querySelectorAll('#home .routine-card, #home .pill-btn:not(:disabled)'));
+    if (!els.length) return;
+    const idx = els.indexOf(document.activeElement);
+    const next = idx === -1 ? 0 : (idx + dir + els.length) % els.length;
+    els[next].focus();
+  }
+
+  /* ===== اقتراح ذكي + سجل أسبوعي ===== */
+  function getRecommendedRoutineKey() {
+    const hr = new Date().getHours();
+    if (hr >= 5 && hr < 12) return 'morning';
+    if (hr >= 12 && hr < 18) return 'desk';
+    return 'evening';
+  }
+  function updateGreetingSub() {
+    const hr = new Date().getHours();
+    let msg = 'اختر الروتين المناسب لوقتك الآن وابدأ بضغطة زر';
+    if (hr >= 5 && hr < 12) msg = '☀️ صباح النشاط! نقترح لك البدء بالروتين الصباحي لتنشيط جسمك';
+    else if (hr >= 12 && hr < 18) msg = '💻 وقت الظهيرة والعصر مثالي لروتين راحة المكتب وفك تيبس الظهر';
+    else msg = '🌙 مساء الهدوء! الروتين المسائي يجهز عضلاتك وأعصابك لنوم عميق';
+    $('greetingSub').textContent = msg;
+  }
+  function dateKey(d) { return 'routine-done-' + d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+  function todayKey() { return dateKey(new Date()); }
+  function hasAnyDoneOnDate(d) {
+    try {
+      const rec = JSON.parse(localStorage.getItem(dateKey(d)) || '{}');
+      return !!(rec.morning || rec.desk || rec.evening);
+    } catch (e) { return false; }
+  }
+  function isDone(k) {
+    try { return !!JSON.parse(localStorage.getItem(todayKey()) || '{}')[k]; } catch (e) { return false; }
+  }
+  function markDone(k) {
+    try {
+      const d = JSON.parse(localStorage.getItem(todayKey()) || '{}');
+      d[k] = true;
+      localStorage.setItem(todayKey(), JSON.stringify(d));
+    } catch (e) {}
+  }
+  function calculateStreak() {
+    let streak = 0;
+    try {
+      const d = new Date();
+      for (let i = 0; i < 365; i++) {
+        if (hasAnyDoneOnDate(d)) streak++;
+        else if (i > 0) break;
+        d.setDate(d.getDate() - 1);
+      }
+    } catch (e) {}
+    return streak;
+  }
+  function renderWeekStrip() {
+    const strip = $('weekStrip');
+    strip.innerHTML = '';
+    const dayNames = ['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const done = hasAnyDoneOnDate(d);
+      const el = document.createElement('div');
+      el.className = 'day-dot' + (done ? ' done' : '') + (i === 0 ? ' today' : '');
+      el.innerHTML = `<span class="circle"></span><span>${i === 0 ? 'اليوم' : dayNames[d.getDay()]}</span>`;
+      strip.appendChild(el);
+    }
+  }
+  function refreshDoneBadges() {
+    document.querySelectorAll('.routine-card').forEach(c => {
+      c.classList.toggle('done', isDone(c.dataset.routine));
+    });
+    const streak = calculateStreak();
+    $('streakCount').textContent = streak + (streak === 1 ? ' يوم' : ' أيام');
+    renderWeekStrip();
+    updateGreetingSub();
+  }
+
+  /* ===== شاشة التمهيد ===== */
+  function openIntro(key) {
+    state.routineKey = key;
+    const routine = ROUTINES[key];
+    state.routine = routine;
+
+    $('introEmoji').textContent = routine.emoji;
+    $('introTitle').textContent = routine.name;
+    $('introMeta').textContent = routine.meta;
+    $('introGoal').textContent = routine.goal;
+
+    const grid = $('introBenefits');
+    grid.innerHTML = '';
+    routine.benefits.forEach(text => {
+      const d = document.createElement('div');
+      d.className = 'benefit-item';
+      d.innerHTML = '<span style="font-size:1.2em;">✨</span><span>' + text + '</span>';
+      grid.appendChild(d);
+    });
+
+    showScreen('intro', true);
+    setTimeout(() => speakArabic(routine.spokenName + '. ' + routine.goal), 250);
+  }
+  function backFromIntro() {
+    stopSpeaking();
+    state.routine = null;
+    state.routineKey = null;
+    showScreen('home');
+    if (location.hash) { try { history.back(); } catch (e) {} }
+  }
+
+  /* ===== مؤشر التنفس ===== */
+  function startBreathingPacer() {
+    stopBreathingPacer();
+    state.inhalePhase = true;
+    updateBreathOrbUI();
+    state.breathInterval = setInterval(() => {
+      if (state.paused) return;
+      state.inhalePhase = !state.inhalePhase;
+      updateBreathOrbUI();
+    }, 3000);
+  }
+  function stopBreathingPacer() {
+    if (state.breathInterval) { clearInterval(state.breathInterval); state.breathInterval = null; }
+  }
+  function updateBreathOrbUI() {
+    const orb = $('breathOrb');
+    const lbl = $('breathStateLbl');
+    if (!orb || !lbl) return;
+    orb.classList.toggle('inhale', state.inhalePhase);
+    orb.classList.toggle('exhale', !state.inhalePhase);
+    lbl.textContent = state.inhalePhase ? 'شهيق ⬆️' : 'زفير ⬇️';
+  }
+
+  /* ===== تجميد حركة SVG ===== */
+  function setSvgAnimationPaused(paused) {
+    const svg = document.querySelector('#svgContainer svg');
+    if (!svg) return;
+    try {
+      if (paused && svg.pauseAnimations) svg.pauseAnimations();
+      else if (!paused && svg.unpauseAnimations) svg.unpauseAnimations();
+    } catch (e) {}
+  }
+
+  /* ===== المشغل ===== */
+  function startRoutine(key) {
+    state.routineKey = key;
+    state.routine = ROUTINES[key];
+    state.index = 0;
+    $('routineLabel').textContent = state.routine.name;
+    showScreen('player', true);
+    requestWakeLock();
+    startBreathingPacer();
+    startPrepPhase(false);
+  }
+
+  function clearTimers() {
+    if (state.endTimeout) { clearTimeout(state.endTimeout); state.endTimeout = null; }
+    if (state.rafHandle) { cancelAnimationFrame(state.rafHandle); state.rafHandle = null; }
+  }
+
+  function beginPhaseTimer(seconds) {
+    clearTimers();
+    state.totalPhaseSeconds = seconds;
+    state.remaining = seconds;
+    state.phaseEndTime = performance.now() + seconds * 1000;
+    state.paused = false;
+    state.pausedRemainingMs = 0;
+    state.lastRenderedSec = -1;
+    updatePauseButtonUI();
+    renderFrame(performance.now());
+    state.rafHandle = requestAnimationFrame(loopFrame);
+  }
+
+  function startPrepPhase(short) {
+    state.phase = 'prep';
+    document.body.classList.add('prep-ambient');
+    const secs = short ? PREP_SECONDS_SHORT : PREP_SECONDS;
+    renderPlayerStatic();
+    beginPhaseTimer(secs);
+    const ex = state.routine.exercises[state.index];
+    playTone(520, 120, 0.06, 'sine');
+    speakArabic('استعد لـ ' + ex.name);
+  }
+
+  function startWorkPhase() {
+    const ex = state.routine.exercises[state.index];
+    state.phase = 'work';
+    document.body.classList.remove('prep-ambient');
+    renderPlayerStatic();
+    beginPhaseTimer(ex.seconds);
+    startSound();
+    speakArabic('ابدأ الآن. ' + ex.target + '. ' + ex.steps[0]);
+  }
+
+  function highlightActiveStep(elapsedRatio) {
+    const activeIdx = state.phase === 'prep' ? 0 : Math.min(2, Math.floor(elapsedRatio * 3));
+    for (let i = 0; i < 3; i++) {
+      const box = $('stepBox' + i);
+      if (box) box.classList.toggle('active-step', i === activeIdx);
+    }
+  }
+
+  function loopFrame(now) {
+    if (state.paused) return;
+    const msLeft = Math.max(0, state.phaseEndTime - now);
+    const newSec = Math.ceil(msLeft / 1000);
+
+    if (newSec !== state.remaining) {
+      state.remaining = newSec;
+      if (state.phase === 'work' && state.totalPhaseSeconds >= 40 && newSec === Math.floor(state.totalPhaseSeconds / 2)) {
+        speakArabic('منتصف الوقت، استمر');
+      }
+      if (newSec > 0 && newSec <= 3) {
+        if (state.phase === 'work' || !state.voiceEnabled) {
+          playTone(740, 80, 0.07, 'triangle');
+        }
+      }
+    }
+
+    renderFrame(now);
+
+    if (msLeft <= 0) {
+      state.rafHandle = null;
+      if (state.phase === 'prep') {
+        startWorkPhase();
+      } else {
+        playTone(880, 220, 0.1, 'triangle');
+        state.endTimeout = setTimeout(() => {
+          state.endTimeout = null;
+          advanceToNextExercise();
+        }, 420);
+      }
+      return;
+    }
+
+    state.rafHandle = requestAnimationFrame(loopFrame);
+  }
+
+  function renderFrame(now) {
+    const totalMs = Math.max(1000, state.totalPhaseSeconds * 1000);
+    const msLeft = state.paused ? state.pausedRemainingMs : Math.max(0, state.phaseEndTime - now);
+    const secDisplay = Math.ceil(msLeft / 1000);
+
+    const t = $('timer');
+    const ring = $('ringProgress');
+
+    if (state.lastRenderedSec !== secDisplay) {
+      state.lastRenderedSec = secDisplay;
+      t.textContent = String(Math.floor(secDisplay / 60)).padStart(2, '0') + ':' + String(secDisplay % 60).padStart(2, '0');
+
+      t.classList.remove('warning', 'danger', 'paused', 'prep-timer');
+      if (state.paused) t.classList.add('paused');
+      else if (state.phase === 'prep') t.classList.add('prep-timer');
+      else if (secDisplay <= 3) t.classList.add('danger');
+      else if (secDisplay <= 10) t.classList.add('warning');
+
+      if (state.phase === 'work' && secDisplay <= 3 && !state.paused) {
+        ring.classList.add('danger-ring');
+      } else {
+        ring.classList.remove('danger-ring');
+      }
+    }
+
+    const fractionRemaining = Math.max(0, Math.min(1, msLeft / totalMs));
+    const offset = RING_CIRCUMFERENCE * (1 - fractionRemaining);
+    ring.style.strokeDashoffset = offset.toFixed(2);
+
+    highlightActiveStep(1 - fractionRemaining);
+  }
+
+  function renderPlayerStatic() {
+    const ex = state.routine.exercises[state.index];
+    const isPrep = state.phase === 'prep';
+    const badge = $('phaseBadge');
+    const visualPanel = $('visualPanel');
+    const ring = $('ringProgress');
+    const nextBtn = $('nextBtn');
+
+    if (isPrep) {
+      badge.textContent = state.index === 0 ? '⏳ استعد للتمرين الأول (◀ للبدء فوراً)' : '⏳ استعد للتمرين التالي (◀ للبدء فوراً)';
+      badge.classList.add('prep');
+      visualPanel.classList.add('prep-mode');
+      ring.classList.add('prep-ring'); ring.classList.remove('danger-ring');
+      nextBtn.textContent = '▶ ابدأ فوراً (يسار)';
+      $('timerSublabel').textContent = 'ثوانٍ للبدء';
+    } else {
+      badge.textContent = '💪 التمرين جاري الآن';
+      badge.classList.remove('prep');
+      visualPanel.classList.remove('prep-mode');
+      ring.classList.remove('prep-ring', 'danger-ring');
+      nextBtn.textContent = 'تخطي للتالي (يسار) ⏭';
+      $('timerSublabel').textContent = 'ثانية متبقية';
+    }
+
+    $('exName').textContent = ex.name;
+    $('exDesc').textContent = ex.desc;
+    $('exTarget').textContent = 'الهدف: ' + ex.target;
+    $('exPosition').textContent = ex.position;
+    $('exMuscle').textContent = ex.muscle;
+    $('exBreath').textContent = ex.breath;
+
+    $('step1').textContent = ex.steps[0] || '';
+    $('step2').textContent = ex.steps[1] || '';
+    $('step3').textContent = ex.steps[2] || '';
+
+    const nextEx = state.routine.exercises[state.index + 1];
+    $('nextExLabel').textContent = nextEx ? (nextEx.name + ' (' + nextEx.target + ')') : 'نهاية الروتين 🎉';
+
+    $('exerciseCounter').textContent = 'التمرين ' + (state.index + 1) + ' من ' + state.routine.exercises.length;
+    $('svgContainer').innerHTML = ILLUSTRATIONS[ex.svg] || ILLUSTRATIONS.stretch;
+
+    const dots = $('progressDots');
+    dots.innerHTML = '';
+    state.routine.exercises.forEach((_, i) => {
+      const d = document.createElement('div');
+      d.className = 'dot';
+      if (i < state.index) d.classList.add('done');
+      else if (i === state.index) d.classList.add('active');
+      dots.appendChild(d);
+    });
+  }
+
+  function advanceToNextExercise() {
+    clearTimers();
+    if (!state.routine) return;
+    if (state.index >= state.routine.exercises.length - 1) { finishRoutine(); return; }
+    state.index++;
+    startPrepPhase(false);
+  }
+  function handleNextOrSkip() {
+    if (!state.routine) return;
+    if (state.phase === 'prep') startWorkPhase();
+    else advanceToNextExercise();
+  }
+  function prevExercise() {
+    clearTimers();
+    if (!state.routine) return;
+    if (state.index > 0) state.index--;
+    startPrepPhase(true);
+  }
+  function updatePauseButtonUI() {
+    $('pauseBtn').textContent = state.paused ? '▶ متابعة (OK)' : '⏸ إيقاف مؤقت (OK)';
+    $('pauseBtn').classList.toggle('primary', !state.paused);
+  }
+  function togglePause() {
+    if (!state.routine || state.endTimeout) return;
+    if (state.paused) {
+      // استئناف
+      state.phaseEndTime = performance.now() + state.pausedRemainingMs;
+      state.paused = false;
+      state.lastRenderedSec = -1;
+      state.rafHandle = requestAnimationFrame(loopFrame);
+      setSvgAnimationPaused(false);
+      startBreathingPacer();
+      playTone(660, 90, 0.06, 'triangle');
+    } else {
+      // إيقاف مؤقت
+      state.pausedRemainingMs = Math.max(0, state.phaseEndTime - performance.now());
+      state.paused = true;
+      if (state.rafHandle) { cancelAnimationFrame(state.rafHandle); state.rafHandle = null; }
+      setSvgAnimationPaused(true);
+      stopBreathingPacer();
+      stopSpeaking();
+      playTone(440, 90, 0.05, 'sine');
+    }
+    updatePauseButtonUI();
+    renderFrame(performance.now());
+  }
+
+  function finishRoutine() {
+    clearTimers();
+    releaseWakeLock();
+    stopBreathingPacer();
+    markDone(state.routineKey);
+    refreshDoneBadges();
+
+    const exCount = state.routine.exercises.length;
+    const streak = calculateStreak();
+    $('doneMsg').textContent = 'أتممت ' + state.routine.name + ' بالكامل، خطوة ممتازة لصحتك ولياقتك اليوم!';
+    $('doneExercisesCount').textContent = exCount;
+    $('doneStreakVal').textContent = streak;
+
+    const doneGrid = $('doneBenefits');
+    doneGrid.innerHTML = '';
+    state.routine.benefits.forEach(text => {
+      const d = document.createElement('div');
+      d.className = 'done-benefit';
+      d.innerHTML = '<span class="check">✓</span><span>' + text + '</span>';
+      doneGrid.appendChild(d);
+    });
+
+    showScreen('done', true);
+    chimeVictory();
+    setTimeout(() => speakArabic('أحسنت! أتممت ' + state.routine.spokenName + ' بنجاح'), 900);
+  }
+
+  function exitPlayer(updateHistory = true) {
+    clearTimers();
+    stopSpeaking();
+    stopBreathingPacer();
+    releaseWakeLock();
+    document.body.classList.remove('prep-ambient');
+    state.routine = null;
+    state.routineKey = null;
+    state.paused = false;
+    state.pausedRemainingMs = 0;
+    state.lastRenderedSec = -1;
+    showScreen('home');
+    refreshDoneBadges();
+    if (updateHistory && location.hash) {
+      try { history.back(); } catch (e) {}
+    }
+  }
+
+  /* ===== ربط الأحداث ===== */
+  document.querySelectorAll('.routine-card').forEach(c =>
+    c.addEventListener('click', () => openIntro(c.dataset.routine))
+  );
+  $('voiceToggleHome').addEventListener('click', toggleVoice);
+  $('introBackBtn').addEventListener('click', backFromIntro);
+  $('introStartBtn').addEventListener('click', () => {
+    if (state.routineKey) startRoutine(state.routineKey);
+  });
+  $('prevBtn').addEventListener('click', prevExercise);
+  $('nextBtn').addEventListener('click', handleNextOrSkip);
+  $('pauseBtn').addEventListener('click', togglePause);
+  $('exitBtn').addEventListener('click', () => exitPlayer(true));
+  $('homeBtn').addEventListener('click', () => exitPlayer(true));
+
+  document.addEventListener('keydown', (e) => {
+    const k = e.key;
+    const code = e.keyCode;
+
+    if (k === 'm' || k === 'M' || k === 'AudioVolumeMute') {
+      e.preventDefault(); toggleVoice(); return;
+    }
+
+    if (state.screen === 'home') {
+      if (k === 'ArrowRight' || k === 'ArrowDown') { e.preventDefault(); cycleFocus(1); }
+      else if (k === 'ArrowLeft') { e.preventDefault(); cycleFocus(-1); }
+      else if (k === 'ArrowUp') { e.preventDefault(); toggleVoice(); }
+      return;
+    }
+
+    if (state.screen === 'intro') {
+      if (k === 'ArrowLeft' || k === 'ArrowRight') {
+        e.preventDefault();
+        const a = document.activeElement;
+        if (a === $('introStartBtn')) $('introBackBtn').focus();
+        else $('introStartBtn').focus();
+      } else if (k === 'Escape' || k === 'Backspace'
+                 || k === 'GoBack' || k === 'BrowserBack'
+                 || code === 4 || code === 461 || code === 10009) {
+        e.preventDefault(); backFromIntro();
+      }
+      return;
+    }
+
+    if (state.screen === 'done') {
+      if (k === 'Enter' || k === ' ' || k === 'Escape' || k === 'Backspace'
+          || k === 'GoBack' || k === 'BrowserBack'
+          || code === 4 || code === 461 || code === 10009) {
+        e.preventDefault(); exitPlayer(true);
+      }
+      return;
+    }
+
+    if (state.screen === 'player') {
+      if (k === 'ArrowLeft') { e.preventDefault(); handleNextOrSkip(); }
+      else if (k === 'ArrowRight') { e.preventDefault(); prevExercise(); }
+      else if (k === 'ArrowUp') { e.preventDefault(); toggleVoice(); }
+      else if (k === 'Enter' || k === ' ' || k === 'MediaPlayPause') {
+        e.preventDefault(); togglePause();
+      } else if (k === 'Escape' || k === 'Backspace'
+                 || k === 'GoBack' || k === 'BrowserBack'
+                 || code === 4 || code === 461 || code === 10009) {
+        e.preventDefault(); exitPlayer(true);
+      }
+    }
+  });
+
+  /* ===== التهيئة ===== */
+  if (location.hash === '#player' || location.hash === '#intro' || location.hash === '#done') {
+    try { history.replaceState(null, '', location.pathname); } catch (e) {}
+  }
+  if ('speechSynthesis' in window) {
+    checkArabicVoice();
+    window.speechSynthesis.addEventListener('voiceschanged', () => {
+      checkArabicVoice(); updateVoiceUI();
+    });
+    setTimeout(() => { checkArabicVoice(); updateVoiceUI(); }, 500);
+  }
+  updateVoiceUI();
+  refreshDoneBadges();
+  setTimeout(() => {
+    const preferred = getRecommendedRoutineKey();
+    const card = document.querySelector(`.routine-card[data-routine="${preferred}"]`) || document.querySelector('.routine-card');
+    if (card) card.focus();
+  }, 100);
+})();
+</script>
+</body>
+</html>
