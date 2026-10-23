@@ -1,0 +1,12 @@
+{
+  "background_color": "#ffffff",
+  "dir": "rtl",
+  "display": "standalone",
+  "name": "Daily Fitness TV",
+  "orientation": "any",
+  "scope": "https://abdulnasser825-tech.github.io/nasser1/",
+  "short_name": "Fitness",
+  "start_url": "https://abdulnasser825-tech.github.io/nasser1/",
+  "theme_color": "#060d14",
+  "description": "Daily exercise routines for Android TV"
+}
