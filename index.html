@@ -6,6 +6,11 @@
 <meta name="theme-color" content="#060d14">
 <title>التمارين اليومية - Android TV Pro</title>
   <link rel="manifest" href="./manifest.json">
+  <script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./pwabuilder-sw.js');
+  }
+</script>
 <style>
   :root {
     --bg-top: #0c1b29;
